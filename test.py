@@ -2,7 +2,6 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 import os
 
-
 class StaticCompleter(Completer):
     def __init__(self, words):
         self.words = words
@@ -26,6 +25,8 @@ class FileCompleter(Completer):
         for completion in completions:
             yield Completion(completion, start_position=-len(text_before_cursor))
 
+from prompt_toolkit.document import Document
+
 class MainCompleter(Completer):
     def __init__(self, command_completer, file_completer):
         self.command_completer = command_completer
@@ -39,7 +40,7 @@ class MainCompleter(Completer):
             yield from self.command_completer.get_completions(document, complete_event)
         elif len(words) > 1 and words[0] == 'load':
             # Adjust document for file completer
-            new_document = document._replace(text_before_cursor=text_before_cursor[len(words[0])+1:])
+            new_document = Document(text=' '.join(words[1:]), cursor_position=document.cursor_position - len(words[0]) - 1)
             yield from self.file_completer.get_completions(new_document, complete_event)
         # Add more commands and their respective completers here as needed.
 
