@@ -40,13 +40,13 @@ def setup_virtual_environment() -> Tuple[str, str]:
     try:
         if not os.path.exists(venv_path):
             venv.create(venv_path, with_pip=True)
-        
+
         # Activate the virtual environment
         if sys.platform == "win32":
             activate_script = os.path.join(venv_path, "Scripts", "activate.bat")
         else:
             activate_script = os.path.join(venv_path, "bin", "activate")
-        
+
         return venv_path, activate_script
     except Exception as e:
         logging.error(f"Error setting up virtual environment: {str(e)}")
@@ -91,9 +91,6 @@ code_editor_files = set()
 
 # automode flag
 automode = False
-
-# Store file contents
-file_contents = {}
 
 # Global dictionary to store running processes
 running_processes = {}
@@ -218,11 +215,11 @@ def update_system_prompt(current_iteration: Optional[int] = None, max_iterations
 
     Do not reflect on the quality of the returned search results in your response.
     """
-    
+
     file_contents_prompt = "\n\nFile Contents:\n"
     for path, content in file_contents.items():
         file_contents_prompt += f"\n--- {path} ---\n{content}\n"
-    
+
     if automode:
         iteration_info = ""
         if current_iteration is not None and max_iterations is not None:
@@ -389,13 +386,13 @@ def parse_search_replace_blocks(response_text):
     blocks = []
     pattern = r'<SEARCH>\n(.*?)\n</SEARCH>\n<REPLACE>\n(.*?)\n</REPLACE>'
     matches = re.findall(pattern, response_text, re.DOTALL)
-    
+
     for search, replace in matches:
         blocks.append({
             'search': search.strip(),
             'replace': replace.strip()
         })
-    
+
     return json.dumps(blocks)  # Keep returning JSON string
 
 
@@ -410,7 +407,7 @@ async def edit_and_apply(path, instructions, project_context, is_automode=False,
 
         for attempt in range(max_retries):
             edit_instructions_json = await generate_edit_instructions(path, original_content, instructions, project_context, file_contents)
-            
+
             if edit_instructions_json:
                 edit_instructions = json.loads(edit_instructions_json)  # Parse JSON here
                 console.print(Panel(f"Attempt {attempt + 1}/{max_retries}: The following SEARCH/REPLACE blocks have been generated:", title="Edit Instructions", style="cyan"))
@@ -423,13 +420,13 @@ async def edit_and_apply(path, instructions, project_context, is_automode=False,
                 if changes_made:
                     file_contents[path] = edited_content  # Update the file_contents with the new content
                     console.print(Panel(f"File contents updated in system prompt: {path}", style="green"))
-                    
+
                     if failed_edits:
                         console.print(Panel(f"Some edits could not be applied. Retrying...", style="yellow"))
                         instructions += f"\n\nPlease retry the following edits that could not be applied:\n{failed_edits}"
                         original_content = edited_content
                         continue
-                    
+
                     return f"Changes applied to {path}"
                 elif attempt == max_retries - 1:
                     return f"No changes could be applied to {path} after {max_retries} attempts. Please review the edit instructions and try again."
@@ -437,7 +434,7 @@ async def edit_and_apply(path, instructions, project_context, is_automode=False,
                     console.print(Panel(f"No changes could be applied in attempt {attempt + 1}. Retrying...", style="yellow"))
             else:
                 return f"No changes suggested for {path}"
-        
+
         return f"Failed to apply changes to {path} after {max_retries} attempts."
     except Exception as e:
         return f"Error editing/applying to file: {str(e)}"
@@ -462,11 +459,11 @@ async def apply_edits(file_path, edit_instructions, original_content):
         for i, edit in enumerate(edit_instructions, 1):
             search_content = edit['search'].strip()
             replace_content = edit['replace'].strip()
-            
+
             # Use regex to find the content, ignoring leading/trailing whitespace
             pattern = re.compile(re.escape(search_content), re.DOTALL)
             match = pattern.search(edited_content)
-            
+
             if match:
                 # Replace the content, preserving the original whitespace
                 start, end = match.span()
@@ -474,7 +471,7 @@ async def apply_edits(file_path, edit_instructions, original_content):
                 replace_content_cleaned = re.sub(r'</?SEARCH>|</?REPLACE>', '', replace_content)
                 edited_content = edited_content[:start] + replace_content_cleaned + edited_content[end:]
                 changes_made = True
-                
+
                 # Display the diff for this edit
                 diff_result = generate_diff(search_content, replace_content, file_path)
                 console.print(Panel(diff_result, title=f"Changes in {file_path} ({i}/{total_edits})", style="cyan"))
@@ -511,20 +508,20 @@ def generate_diff(original, new, path):
 async def execute_code(code, timeout=10):
     global running_processes
     venv_path, activate_script = setup_virtual_environment()
-    
+
     # Generate a unique identifier for this process
     process_id = f"process_{len(running_processes)}"
-    
+
     # Write the code to a temporary file
     with open(f"{process_id}.py", "w") as f:
         f.write(code)
-    
+
     # Prepare the command to run the code
     if sys.platform == "win32":
         command = f'"{activate_script}" && python3 {process_id}.py'
     else:
         command = f'source "{activate_script}" && python3 {process_id}.py'
-    
+
     # Create a process to run the command
     process = await asyncio.create_subprocess_shell(
         command,
@@ -533,10 +530,10 @@ async def execute_code(code, timeout=10):
         shell=True,
         preexec_fn=None if sys.platform == "win32" else os.setsid
     )
-    
+
     # Store the process in our global dictionary
     running_processes[process_id] = process
-    
+
     try:
         # Wait for initial output or timeout
         stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
@@ -548,7 +545,7 @@ async def execute_code(code, timeout=10):
         stdout = "Process started and running in the background."
         stderr = ""
         return_code = "Running"
-    
+
     execution_result = f"Process ID: {process_id}\n\nStdout:\n{stdout}\n\nStderr:\n{stderr}\n\nReturn Code: {return_code}"
     return process_id, execution_result
 
@@ -881,7 +878,7 @@ def save_chat():
     # Generate filename
     now = datetime.datetime.now()
     filename = f"Chat_{now.strftime('%H%M')}.md"
-    
+
     # Format conversation history
     formatted_chat = "# Claude-3-Sonnet Engineer Chat Log\n\n"
     for message in conversation_history:
@@ -900,11 +897,11 @@ def save_chat():
             for content in message['content']:
                 if content['type'] == 'tool_result':
                     formatted_chat += f"### Tool Result\n\n```\n{content['content']}\n```\n\n"
-    
+
     # Save to file
     with open(filename, 'w', encoding='utf-8') as f:
         f.write(formatted_chat)
-    
+
     return filename
 
 
@@ -1024,7 +1021,7 @@ async def chat_with_claude(user_input, image_path=None, current_iteration=None, 
         console.print(Panel(f"Tool Input: {json.dumps(tool_input, indent=2)}", style="green"))
 
         tool_result = await execute_tool(tool_name, tool_input)
-        
+
         if tool_result["is_error"]:
             console.print(Panel(tool_result["content"], title="Tool Execution Error", style="bold red"))
         else:
@@ -1107,14 +1104,15 @@ def reset_code_editor_memory():
     console.print(Panel("Code editor memory has been reset.", title="Reset", style="bold green"))
 
 
-def reset_conversation():
+def reset_conversation(keep_files=False):
     global conversation_history, main_model_tokens, tool_checker_tokens, code_editor_tokens, code_execution_tokens, file_contents, code_editor_files
     conversation_history = []
     main_model_tokens = {'input': 0, 'output': 0}
     tool_checker_tokens = {'input': 0, 'output': 0}
     code_editor_tokens = {'input': 0, 'output': 0}
     code_execution_tokens = {'input': 0, 'output': 0}
-    file_contents = {}
+    if not keep_files:
+        file_contents = {}
     code_editor_files = set()
     reset_code_editor_memory()
     console.print(Panel("Conversation history, token counts, file contents, code editor memory, and code editor files have been reset.", title="Reset", style="bold green"))
@@ -1191,86 +1189,102 @@ def display_token_usage():
 
     console.print(table)
 
-
+def show_help():
+    console.print("Type 'exit' or 'quit' or 'q' to end the conversation.")
+    console.print("Type 'image' to include an image in your message.")
+    console.print("Type 'reset' to clear the conversation history.")
+    console.print("Type 'save chat' to save the conversation to a Markdown file.")
+    console.print("Type 'help' to get help from the Assistant.")
+    console.print("Type '/help' to show this help message.")
+    console.print("Type 'automode [number]' to enter Autonomous mode with a specific number of iterations.")
+    console.print("While in automode, press Ctrl+C at any time to exit the automode to return to regular chat.")
 
 async def main():
     global automode, conversation_history
     console.print(Panel("Welcome to the Claude-3-Sonnet Engineer Chat with Multi-Agent and Image Support!", title="Welcome", style="bold green"))
-    console.print("Type 'exit' to end the conversation.")
-    console.print("Type 'image' to include an image in your message.")
-    console.print("Type 'automode [number]' to enter Autonomous mode with a specific number of iterations.")
-    console.print("Type 'reset' to clear the conversation history.")
-    console.print("Type 'save chat' to save the conversation to a Markdown file.")
-    console.print("While in automode, press Ctrl+C at any time to exit the automode to return to regular chat.")
+    show_help()
 
+    prompt_ready = False
     while True:
-        user_input = await get_user_input()
+        try:
+            prompt_ready = True
+            user_input = await get_user_input()
+            prompt_ready = False
 
-        if user_input.lower() == 'exit':
-            console.print(Panel("Thank you for chatting. Goodbye!", title_align="left", title="Goodbye", style="bold green"))
-            break
-
-        if user_input.lower() == 'reset':
-            reset_conversation()
-            continue
-
-        if user_input.lower() == 'save chat':
-            filename = save_chat()
-            console.print(Panel(f"Chat saved to {filename}", title="Chat Saved", style="bold green"))
-            continue
-
-        if user_input.lower() == 'image':
-            image_path = (await get_user_input("Drag and drop your image here, then press enter: ")).strip().replace("'", "")
-
-            if os.path.isfile(image_path):
-                user_input = await get_user_input("You (prompt for image): ")
-                response, _ = await chat_with_claude(user_input, image_path)
-            else:
-                console.print(Panel("Invalid image path. Please try again.", title="Error", style="bold red"))
+            if user_input.lower() == '/help':
+                show_help()
                 continue
-        elif user_input.lower().startswith('automode'):
-            try:
-                parts = user_input.split()
-                if len(parts) > 1 and parts[1].isdigit():
-                    max_iterations = int(parts[1])
+
+            if user_input.lower() == 'exit' or user_input.lower() == 'quit' or user_input.lower() == 'q':
+                console.print(Panel("Thank you for chatting. Goodbye!", title_align="left", title="Goodbye", style="bold green"))
+                break
+
+            if user_input.lower() == 'reset':
+                reset_conversation(keep_files=False)
+                continue
+
+            if user_input.lower() == 'save chat':
+                filename = save_chat()
+                console.print(Panel(f"Chat saved to {filename}", title="Chat Saved", style="bold green"))
+                continue
+
+            if user_input.lower() == 'image':
+                image_path = (await get_user_input("Drag and drop your image here, then press enter: ")).strip().replace("'", "")
+
+                if os.path.isfile(image_path):
+                    user_input = await get_user_input("You (prompt for image): ")
+                    response, _ = await chat_with_claude(user_input, image_path)
                 else:
-                    max_iterations = MAX_CONTINUATION_ITERATIONS
-
-                automode = True
-                console.print(Panel(f"Entering automode with {max_iterations} iterations. Please provide the goal of the automode.", title_align="left", title="Automode", style="bold yellow"))
-                console.print(Panel("Press Ctrl+C at any time to exit the automode loop.", style="bold yellow"))
-                user_input = await get_user_input()
-
-                iteration_count = 0
+                    console.print(Panel("Invalid image path. Please try again.", title="Error", style="bold red"))
+                    continue
+            elif user_input.lower().startswith('automode'):
                 try:
-                    while automode and iteration_count < max_iterations:
-                        response, exit_continuation = await chat_with_claude(user_input, current_iteration=iteration_count+1, max_iterations=max_iterations)
+                    parts = user_input.split()
+                    if len(parts) > 1 and parts[1].isdigit():
+                        max_iterations = int(parts[1])
+                    else:
+                        max_iterations = MAX_CONTINUATION_ITERATIONS
 
-                        if exit_continuation or CONTINUATION_EXIT_PHRASE in response:
-                            console.print(Panel("Automode completed.", title_align="left", title="Automode", style="green"))
-                            automode = False
-                        else:
-                            console.print(Panel(f"Continuation iteration {iteration_count + 1} completed. Press Ctrl+C to exit automode. ", title_align="left", title="Automode", style="yellow"))
-                            user_input = "Continue with the next step. Or STOP by saying 'AUTOMODE_COMPLETE' if you think you've achieved the results established in the original request."
-                        iteration_count += 1
+                    automode = True
+                    console.print(Panel(f"Entering automode with {max_iterations} iterations. Please provide the goal of the automode.", title_align="left", title="Automode", style="bold yellow"))
+                    console.print(Panel("Press Ctrl+C at any time to exit the automode loop.", style="bold yellow"))
+                    user_input = await get_user_input()
 
-                        if iteration_count >= max_iterations:
-                            console.print(Panel("Max iterations reached. Exiting automode.", title_align="left", title="Automode", style="bold red"))
-                            automode = False
+                    iteration_count = 0
+                    try:
+                        while automode and iteration_count < max_iterations:
+                            response, exit_continuation = await chat_with_claude(user_input, current_iteration=iteration_count+1, max_iterations=max_iterations)
+
+                            if exit_continuation or CONTINUATION_EXIT_PHRASE in response:
+                                console.print(Panel("Automode completed.", title_align="left", title="Automode", style="green"))
+                                automode = False
+                            else:
+                                console.print(Panel(f"Continuation iteration {iteration_count + 1} completed. Press Ctrl+C to exit automode. ", title_align="left", title="Automode", style="yellow"))
+                                user_input = "Continue with the next step. Or STOP by saying 'AUTOMODE_COMPLETE' if you think you've achieved the results established in the original request."
+                            iteration_count += 1
+
+                            if iteration_count >= max_iterations:
+                                console.print(Panel("Max iterations reached. Exiting automode.", title_align="left", title="Automode", style="bold red"))
+                                automode = False
+                    except KeyboardInterrupt:
+                        console.print(Panel("\nAutomode interrupted by user. Exiting automode.", title_align="left", title="Automode", style="bold red"))
+                        automode = False
+                        if conversation_history and conversation_history[-1]["role"] == "user":
+                            conversation_history.append({"role": "assistant", "content": "Automode interrupted. How can I assist you further?"})
                 except KeyboardInterrupt:
                     console.print(Panel("\nAutomode interrupted by user. Exiting automode.", title_align="left", title="Automode", style="bold red"))
                     automode = False
                     if conversation_history and conversation_history[-1]["role"] == "user":
                         conversation_history.append({"role": "assistant", "content": "Automode interrupted. How can I assist you further?"})
-            except KeyboardInterrupt:
-                console.print(Panel("\nAutomode interrupted by user. Exiting automode.", title_align="left", title="Automode", style="bold red"))
-                automode = False
-                if conversation_history and conversation_history[-1]["role"] == "user":
-                    conversation_history.append({"role": "assistant", "content": "Automode interrupted. How can I assist you further?"})
 
-            console.print(Panel("Exited automode. Returning to regular chat.", style="green"))
-        else:
-            response, _ = await chat_with_claude(user_input)
+                console.print(Panel("Exited automode. Returning to regular chat.", style="green"))
+            else:
+                response, _ = await chat_with_claude(user_input)
+        except KeyboardInterrupt:
+            if prompt_ready:
+                console.print(Panel("Type 'exit' or 'q' to exit.", title_align="left", title="Trying to exit?", style="yellow"))
+            else:
+                console.print(Panel("Processsing interrupted. Type 'exit' or 'q' to exit.", title_align="left", title="Interrupted", style="yellow"))
 
 if __name__ == "__main__":
     asyncio.run(main())
