@@ -5,7 +5,7 @@ import asyncio
 import re
 
 class StaticCompleter(Completer):
-    def __init__(self, words):
+    def __init__(self, words: list[str]):
         self.words = words
 
     def get_completions(self, document, complete_event):
@@ -14,12 +14,19 @@ class StaticCompleter(Completer):
             if word.startswith(text_before_cursor):
                 yield Completion(word, start_position=-len(text_before_cursor))
 
-ROOT_DIR = os.getcwd()
+def dir_sort(path, files: list[str]) -> list[str]:
+    # sort files alphabetically
+    files.sort()
+    # now, sort files so that directories come before files
+    files.sort(key=lambda f: os.path.isdir(os.path.join(path, f)))
+    # add a '/' to directories
+    files = [f + ('/' if os.path.isdir(os.path.join(path, f)) else '') for f in files]
+    return files
 
 class FileCompleter(Completer):
     def get_completions(self, document, complete_event):
         text_before_cursor = document.text_before_cursor
-        path = ROOT_DIR
+        path = os.getcwd()
 
         if text_before_cursor:
             parts = text_before_cursor.split('/')
@@ -39,22 +46,9 @@ class FileCompleter(Completer):
                     ignore_globs = [glob.replace('.', '\\.') for glob in f.read().splitlines()]
                     # replace asterisks with regex wildcards
                     ignore_globs = [glob.replace('*', '.*') for glob in ignore_globs]
-            # if os.path.exists(os.path.join(path, '.gitignore')):
-            #     with open(os.path.join(path, '.gitignore'), 'r') as f:
-            #         ignore_globs = [re.escape(glob) for glob in f.read().splitlines()]
                     files = [f for f in files if not re.match('|'.join(ignore_globs), f)]
-            # # ignore hidden files
-            # files = [f for f in files if not f.startswith('.')]
 
-            # sort files alphabetically
-            files.sort()
-
-            # now, sort files so that directories come before files
-            files.sort(key=lambda f: os.path.isdir(os.path.join(path, f)))
-
-            # add a '/' to directories
-            files = [f + ('/' if os.path.isdir(os.path.join(path, f)) else '') for f in files]
-
+            files = dir_sort(path, files)
 
         except OSError:
             files = []
