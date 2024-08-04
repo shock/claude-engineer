@@ -58,14 +58,20 @@ class FileCompleter(Completer):
 from prompt_toolkit.document import Document
 
 class MainCompleter(Completer):
-    def __init__(self, command_completer, file_completer):
-        self.command_completer = command_completer
-        self.file_completer = file_completer
+    def __init__(self):
+        # Define static commands
+        commands = ['load', 'drop', 'help']
+
+        # Create completers
+        self.command_completer = StaticCompleter(commands)
+        self.file_completer = FileCompleter()
 
     def get_completions(self, document, complete_event):
         text_before_cursor = document.text_before_cursor
         words = text_before_cursor.split()
 
+        if not complete_event.completion_requested and text_before_cursor.endswith(' '):
+            return
         if not words or (len(words) == 1 and not text_before_cursor.endswith(' ')):
             yield from self.command_completer.get_completions(document, complete_event)
         elif words[0] == 'load':

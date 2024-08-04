@@ -4,13 +4,7 @@ import asyncio
 import re
 from completers import *
 
-# Define static commands
-commands = ['load', 'drop', 'help']
-
-# Create completers
-command_completer = StaticCompleter(commands)
-file_completer = FileCompleter()
-main_completer = MainCompleter(command_completer, file_completer)
+main_completer = MainCompleter()
 
 # Create a PromptSession
 session = PromptSession()
@@ -20,6 +14,7 @@ async def get_prompt():
     return prompt
 
 async def main():
+    print("Starting main loop...")
     while True:
         try:
             user_input = await get_prompt()
