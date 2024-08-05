@@ -2,3 +2,4 @@
 *.code-workspace
 test_folder
 __pycache__
+node_modules
